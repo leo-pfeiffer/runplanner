@@ -1,0 +1,34 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Run {
+  id        Int       @id @default(autoincrement())
+  distance  Float
+  duration  Int    // in seconds
+  date      DateTime
+  url       String?
+}
+
+model Week {
+  id            Int     @id @default(autoincrement())
+  event         Event   @relation(fields: [eventId], references: [id])
+  weekIndex     Int
+  eventId       Int
+  distanceGoal  Int
+  timeGoal      Int    // in minutes
+}
+
+model Event {
+  id      Int     @id @default(autoincrement())
+  name    String
+  date    DateTime
+  weeks   Week[]
+}
