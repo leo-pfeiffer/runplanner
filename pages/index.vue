@@ -29,6 +29,9 @@ const createEvent = () => {
 </script>
 
 <template>
-  <button @click="createRun">Create run</button>
-  <button @click="createEvent">Create event</button>
+  <h1 class="text-3xl font-bold underline">
+    Hello world!
+  </h1>
+  <button class="bg-blue-500 hover:bg-blue-700 text-white py-2 px-2" @click="createRun">Create run</button>
+  <button class="bg-blue-500 hover:bg-blue-700 text-white py-2 px-2" @click="createEvent">Create event</button>
 </template>
