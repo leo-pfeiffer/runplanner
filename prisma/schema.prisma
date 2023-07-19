@@ -15,6 +15,7 @@ model Run {
   duration  Int    // in seconds
   date      DateTime
   url       String?
+  source    String?
 }
 
 model Week {

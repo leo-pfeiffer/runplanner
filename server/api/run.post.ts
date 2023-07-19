@@ -10,7 +10,8 @@ export default defineEventHandler(async (event) => {
             distance: Number(body.distance),
             duration: Number(body.duration),
             date: new Date(body.date),
-            url: body.url
+            url: body.url,
+            source: body.source
         }
     })
     console.log(result)

@@ -7,11 +7,8 @@ const prisma = new PrismaClient()
 //   not just get by ID
 
 export default defineEventHandler(async (event) => {
-    const body = await readBody(event)
-    console.log(body)
-    const result = await prisma.run.findUnique({
-        where: { id: Number(body.eventId) }
-    })
+    const query = await getQuery(event)
+    let result = await prisma.event.findMany()
     return {
         result : result
     }
