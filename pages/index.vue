@@ -1,10 +1,14 @@
-<script setup>
+<script setup lang="ts">
 
-const EVENT_ID = 1;  // hard coded for testing
+import {Event} from "~/types/Event";
+import {Week} from "~/types/Week";
+import {ApiResult} from "~/types/ApiResult";
+import {Ref} from "vue";
+import {Run} from "~/types/Run";
 
-const event = ref({
-  weeks: []
-})
+const event: Ref<Event | undefined> = ref();
+
+const events: Ref<Event[]> = ref([])
 
 const newRun = ref({
   distance: null,
@@ -14,14 +18,49 @@ const newRun = ref({
   startTime: null,
 });
 
-const displayDiv = ref({});
+const displayDiv: Ref<boolean[]> = ref([]);
 
-const weeks = computed(() => event.value.weeks.sort((a, b) => a.weekIndex - b.weekIndex))
+const selected = ref("")
 
-const getEvent = async () => await $fetch(`/api/event?eventId=${EVENT_ID}`)
+const weeks = computed(() => {
+  if (event.value) {
+    return event.value.weeks.sort((a: Week, b: Week) => a.weekIndex - b.weekIndex)
+  }
+  return []
+})
 
-const toggleDiv = (idx) => {
+const getEvent = async (eventId: number): Promise<ApiResult<Event>> => {
+  return await $fetch(`/api/event?eventId=${eventId}`)
+}
+
+const getEvents = async (): Promise<ApiResult<Event[]>> => {
+  return await $fetch('/api/event')
+}
+
+const getRunsBetweenDates = async (startDate: Date, endDate: Date): Promise<ApiResult<Run[]>> => {
+  return await $fetch(`/api/run?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`)
+}
+
+const toggleDiv = (idx: number) => {
   displayDiv.value[idx] = !displayDiv.value[idx];
+}
+
+const subtractWeeks = (date: Date | string, weeks: number): Date => {
+  date = new Date(date);
+  date.setDate(date.getDate() - 7 * weeks);
+  return date;
+}
+
+const selectEvent = async () => {
+  const receivedEvent = await getEvent(Number(selected.value));
+  if (!receivedEvent || !receivedEvent.result) {
+    return;
+  }
+  event.value = receivedEvent.result;
+  displayDiv.value = new Array(event.value.weeks.length).fill(false);
+  const endDate = new Date(receivedEvent.result.date);
+  const startDate = subtractWeeks(endDate, receivedEvent.result.weeks.length)
+  await getRunsBetweenDates(startDate, endDate).then(console.log)
 }
 
 const createRun = () => {
@@ -42,14 +81,10 @@ const createRun = () => {
 }
 
 onMounted(async () => {
-  const receivedEvent = await getEvent();
-  if (receivedEvent && receivedEvent.result) {
-    console.log(receivedEvent.result)
-    event.value = receivedEvent.result;
+  const allEvents = await getEvents();
+  if (allEvents && allEvents.result) {
+    events.value = allEvents.result;
   }
-  event.value.weeks.forEach((week, i) => {
-    displayDiv.value[i] = false;
-  })
 })
 
 
@@ -60,11 +95,17 @@ onMounted(async () => {
   <main>
     <div class="mx-auto max-w-7xl py-6 sm:px-6 lg:px-8 border-2">
       <div class="text-center py-5 my-2 bg-red-300">
-        <p class="text-2xl font-bold leading-6 text-gray-900">{{ event.name }}</p>
-        <p class="mt-1 truncate text-sm leading-5 text-gray-500">{{ event.date }}</p>
+        <div v-if="event">
+          <p class="text-2xl font-bold leading-6 text-gray-900">{{ event.name }}</p>
+          <p class="mt-1 truncate text-sm leading-5 text-gray-500">{{ event.date }}</p>
+        </div>
+        <select v-model="selected" class="border rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2.5" @change="selectEvent">
+          <option disabled value="">Please select an event</option>
+          <option v-for="e in events" :value="e.id" :key="e.id">{{ e.name }}</option>
+        </select>
       </div>
       <div>
-        <table class="table-auto w-full border-collapse border">
+        <table class="table-auto w-full border-collapse border" v-if="selected">
           <thead class="bg-slate-100">
             <tr class="border">
               <th class="px-4 py-2"></th>
