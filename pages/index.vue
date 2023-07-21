@@ -73,6 +73,10 @@ const toggleDiv = (idx: number) => {
  * Helper methods
  * */
 
+const formatDate = (date: Date | string): string => {
+  return new Date(date).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'})
+}
+
 const getStartDateOfEvent = (event: Event): Date => {
   return subtractWeeks(new Date(event.date), event.weeks.length)
 }
@@ -98,22 +102,66 @@ const getWeekIndexForDate = (startDate: Date | string, runDate: Date | string): 
   return Math.floor((runDate.getTime() - startDate.getTime()) / (1000 * 3600 * 24 * 7))
 }
 
+const getChangeText = (value: number): string => {
+  if (value === 0) {
+    return `➡️ 0%`
+  }
+  if (value < 0) {
+    return `⬇️ ${Math.round(-value * 100)}%`
+  }
+  return `⬆️ ${Math.round(value * 100)}%`
+}
+
+const formatMinutesToTime = (minutes: number): string => {
+  const hours = Math.floor(minutes / 60);
+  minutes = Math.round(minutes - hours * 60);
+  return `${hours}:${minutes < 10 ? '0' : ''}${minutes}`
+}
+
 /**
  * Core
  * */
 
-const totalDurationOfWeek = (weekIndex: number) => {
+const getStartDateOfWeek = (weekIndex: number): Date => {
+  return subtractWeeks(event.value!.date, weeks.value.length - weekIndex)
+}
+
+const totalDurationOfWeek = (weekIndex: number): number => {
   if (runsByWeek.has(weekIndex)) {
-    return runsByWeek.get(weekIndex)?.reduce((acc, run) => acc + run.duration, 0)
+    return runsByWeek.get(weekIndex)!.reduce((acc, run) => acc + run.duration, 0)
   }
   return 0;
 }
 
-const totalDistanceOfWeek = (weekIndex: number) => {
+const totalDistanceOfWeek = (weekIndex: number): number => {
   if (runsByWeek.has(weekIndex)) {
-    return runsByWeek.get(weekIndex)?.reduce((acc, run) => acc + run.distance, 0)
+    return runsByWeek.get(weekIndex)!.reduce((acc, run) => acc + run.distance, 0)
   }
   return 0;
+}
+
+const getWeeklyDistanceChange = (weekIndex: number) => {
+  if (weekIndex === 0) {
+    return 0;
+  }
+  return totalDistanceOfWeek(weekIndex) / totalDistanceOfWeek(weekIndex - 1) - 1;
+}
+
+const getWeeklyDurationChange = (weekIndex: number) => {
+  if (weekIndex === 0) {
+    return 0;
+  }
+  return totalDurationOfWeek(weekIndex) / totalDurationOfWeek(weekIndex - 1) - 1;
+}
+
+const getTargetRangeText = (target: number, actual: number) : string => {
+  if (actual < target * 0.9) {
+    return `😴 Under target`
+  }
+  if (actual > target * 1.1) {
+    return `🥵 Overreaching`
+  }
+  return `😎 Within target`
 }
 
 const selectEvent = async () => {
@@ -190,26 +238,18 @@ onMounted(async () => {
   <Header/>
   <main>
     <div class="mx-auto max-w-7xl py-6 sm:px-6 lg:px-8 border-2">
-      <div class="text-center py-5 my-2 bg-red-300">
-        <div v-if="event">
-          <p class="text-2xl font-bold leading-6 text-gray-900">{{ event.name }}</p>
-          <p class="mt-1 truncate text-sm leading-5 text-gray-500">{{ event.date }}</p>
-        </div>
+      <div>
         <select v-model="selected" class="border rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2.5" @change="selectEvent">
           <option disabled value="">Please select an event</option>
           <option v-for="e in events" :value="e.id" :key="e.id">{{ e.name }}</option>
         </select>
       </div>
+      <div class="text-center py-5 my-2 bg-red-300" v-if="event">
+        <p class="text-2xl font-bold leading-6 text-gray-900">{{ event.name }}</p>
+        <p class="mt-1 truncate text-sm leading-5 text-gray-500">{{ formatDate(event.date) }}</p>
+      </div>
       <div>
         <table class="table-auto w-full border-collapse border" v-if="selected">
-          <thead class="bg-slate-100">
-            <tr class="border">
-              <th class="px-4 py-2"></th>
-              <th class="px-4 py-2">Date</th>
-              <th class="px-4 py-2">Distance</th>
-              <th class="px-4 py-2">Duration</th>
-            </tr>
-          </thead>
           <tbody>
             <tr class="text-sm text-center bg-slate-100">
               <td class="px-4 py-2">
@@ -225,8 +265,8 @@ onMounted(async () => {
               </td>
               <td class="py-2">
                 <input type="number" v-model="newRun.hours" min="0" class="max-w-[4rem] border rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2.5" placeholder="Hrs">
-                <input type="number" v-model="newRun.minutes" min="0" class="border max-w-[4rem] rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2.5" placeholder="Min">
-                <input type="number" v-model="newRun.seconds" min="0" class="border max-w-[4rem] rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2.5" placeholder="Sec">
+                <input type="number" v-model="newRun.minutes" min="0" class="border max-w-[4rem] rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2.5 ml-1" placeholder="Min">
+                <input type="number" v-model="newRun.seconds" min="0" class="border max-w-[4rem] rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2.5 ml-1" placeholder="Sec">
               </td>
             </tr>
           </tbody>
@@ -234,7 +274,7 @@ onMounted(async () => {
       </div>
       <ul role="list">
         <li v-for="(week, idx) in weeks" class="gap-4 gap-x-6">
-          <div class="grid grid-cols-4 py-5 my-2 bg-slate-200">
+          <div class="grid grid-cols-3 py-5 my-2 bg-slate-200">
             <div class="gap-x-4">
               <div class="text-center min-w-0 flex-auto">
                 <div class="text-2xl font-bold text-center text-gray-900">
@@ -246,18 +286,41 @@ onMounted(async () => {
                   </button>
                   Week {{ week.weekIndex }}
                 </div>
+                <p class="text-md font-semibold leading-6 text-gray-900">
+                  {{ formatDate(getStartDateOfWeek(idx)) }}
+                </p>
               </div>
             </div>
             <div class="gap-x-4">
               <div class="min-w-0 flex-auto">
-                <p class="text-md font-semibold leading-6 text-gray-900">Distance</p>
-                <p class="mt-1 truncate text-sm leading-5 text-gray-500">{{ totalDistanceOfWeek(idx) }} mi / {{ week.distanceGoal }} mi</p>
+                <p class="text-md font-semibold leading-6 text-gray-900">
+                  Distance ({{ getChangeText(getWeeklyDistanceChange(idx)) }})
+                </p>
+                <p class="mt-1 truncate text-sm leading-5 text-gray-500" title="Target distance">
+                  🎯 {{ totalDistanceOfWeek(idx) }} mi
+                </p>
+                <p class="mt-1 truncate text-sm leading-5 text-gray-500" title="Actual distance">
+                  🏆 {{ week.distanceGoal }} mi
+                </p>
+                <p class="mt-1 truncate text-sm leading-5 text-gray-500">
+                  {{ getTargetRangeText(week.distanceGoal, totalDistanceOfWeek(idx)) }}
+                </p>
               </div>
             </div>
             <div class="gap-x-4">
               <div class="min-w-0 flex-auto">
-                <p class="text-md font-semibold leading-6 text-gray-900">Duration</p>
-                <p class="mt-1 truncate text-sm leading-5 text-gray-500">{{ totalDurationOfWeek(idx) }} / {{ week.timeGoal }} hrs</p>
+                <p class="text-md font-semibold leading-6 text-gray-900">
+                  Duration ({{ getChangeText(getWeeklyDurationChange(idx)) }})
+                </p>
+                <p class="mt-1 truncate text-sm leading-5 text-gray-500" title="Target distance">
+                  🎯 {{ formatMinutesToTime(totalDurationOfWeek(idx) / 60) }} hrs
+                </p>
+                <p class="mt-1 truncate text-sm leading-5 text-gray-500" title="Target duration">
+                  🏆 {{ formatMinutesToTime(week.timeGoal) }} hrs
+                </p>
+                <p class="mt-1 truncate text-sm leading-5 text-gray-500">
+                  {{ getTargetRangeText(week.timeGoal, totalDurationOfWeek(idx)) }}
+                </p>
               </div>
             </div>
           </div>
