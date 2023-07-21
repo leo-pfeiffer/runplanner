@@ -1,8 +1,7 @@
 export interface Run {
-    id: number
     distance: number
     duration: number
     date: Date
+    source: string
     url: string | null
-    source: string | null
 }

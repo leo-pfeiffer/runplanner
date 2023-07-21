@@ -4,11 +4,15 @@ import {Event} from "~/types/Event";
 import {Week} from "~/types/Week";
 import {ApiResult} from "~/types/ApiResult";
 import {Ref} from "vue";
+import {RunInDb} from "~/types/RunInDb";
 import {Run} from "~/types/Run";
+import {EventInDb} from "~/types/EventInDb";
 
 const event: Ref<Event | undefined> = ref();
 
 const events: Ref<Event[]> = ref([])
+
+const runsByWeek: Map<number,Run[]> = reactive(new Map<number, Run[]>());
 
 const newRun = ref({
   distance: null,
@@ -29,15 +33,15 @@ const weeks = computed(() => {
   return []
 })
 
-const getEvent = async (eventId: number): Promise<ApiResult<Event>> => {
+const getEvent = async (eventId: number): Promise<ApiResult<EventInDb>> => {
   return await $fetch(`/api/event?eventId=${eventId}`)
 }
 
-const getEvents = async (): Promise<ApiResult<Event[]>> => {
+const getEvents = async (): Promise<ApiResult<EventInDb[]>> => {
   return await $fetch('/api/event')
 }
 
-const getRunsBetweenDates = async (startDate: Date, endDate: Date): Promise<ApiResult<Run[]>> => {
+const getRunsBetweenDates = async (startDate: Date, endDate: Date): Promise<ApiResult<RunInDb[]>> => {
   return await $fetch(`/api/run?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`)
 }
 
@@ -45,10 +49,43 @@ const toggleDiv = (idx: number) => {
   displayDiv.value[idx] = !displayDiv.value[idx];
 }
 
+const getStartDateOfEvent = (event: Event): Date => {
+  return subtractWeeks(new Date(event.date), event.weeks.length)
+}
+
 const subtractWeeks = (date: Date | string, weeks: number): Date => {
   date = new Date(date);
   date.setDate(date.getDate() - 7 * weeks);
   return date;
+}
+
+const totalDurationOfWeek = (weekIndex: number) => {
+  if (runsByWeek.has(weekIndex)) {
+    return runsByWeek.get(weekIndex)?.reduce((acc, run) => acc + run.duration, 0)
+  }
+  return 0;
+}
+
+const totalDistanceOfWeek = (weekIndex: number) => {
+  if (runsByWeek.has(weekIndex)) {
+    return runsByWeek.get(weekIndex)?.reduce((acc, run) => acc + run.distance, 0)
+  }
+  return 0;
+}
+
+const getWeekIndexForDate = (startDate: Date | string, runDate: Date | string): number => {
+  startDate = new Date(startDate);
+  runDate = new Date(runDate);
+  return Math.floor((runDate.getTime() - startDate.getTime()) / (1000 * 3600 * 24 * 7))
+}
+
+const insertedRunIntoSortedList = (list: Run[], run: Run): Run[] => {
+  let i = 0;
+  while (i < list.length && new Date(list[i].date) < new Date(run.date)) {
+    i++;
+  }
+  list.splice(i, 0, run);
+  return list;
 }
 
 const selectEvent = async () => {
@@ -59,25 +96,57 @@ const selectEvent = async () => {
   event.value = receivedEvent.result;
   displayDiv.value = new Array(event.value.weeks.length).fill(false);
   const endDate = new Date(receivedEvent.result.date);
-  const startDate = subtractWeeks(endDate, receivedEvent.result.weeks.length)
-  await getRunsBetweenDates(startDate, endDate).then(console.log)
+  const startDate = getStartDateOfEvent(receivedEvent.result)
+  const runs = await getRunsBetweenDates(startDate, endDate)
+  if (!runs || !runs.result) {
+    return;
+  }
+  runsByWeek.clear()
+  runs.result
+    .sort((a: RunInDb, b: RunInDb) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    .forEach(run => {
+      const weekIndex = getWeekIndexForDate(startDate, run.date)
+      if (!runsByWeek.has(weekIndex)) {
+        runsByWeek.set(weekIndex, [run])
+      } else {
+        runsByWeek.get(weekIndex)?.push(run)
+      }
+    })
 }
 
 const createRun = () => {
-  // todo validate input
-  console.log(newRun.value);
+  // todo how to do this more elegantly?
+  if (!newRun.value) return;
+  const distance = Number(newRun.value.distance);
+  const duration = Number(newRun.value.hours) * 3600 + Number(newRun.value.minutes) * 60 + Number(newRun.value.seconds)
+  const startTime = newRun.value.startTime ? new Date(newRun.value.startTime) : null;
+  if (distance < 0.1 || duration < 30 || !startTime) {
+    return;
+  }
+
+  const newBaseRun: Run = {
+    distance: distance,
+    duration: duration,
+    date: startTime,
+    source: 'manual',
+    url: null
+  }
+
   $fetch(
     '/api/run',
     {
       method: 'POST',
-      body: {
-        distance: newRun.value.distance,
-        duration: Number(newRun.value.hours) * 3600 + Number(newRun.value.minutes) * 60 + Number(newRun.value.seconds),
-        date: newRun.value.startTime,
-        source: 'manual',
-      }
+      body: newBaseRun
     }
   )
+  const startDate = getStartDateOfEvent(event.value!)
+  const weekIndex = getWeekIndexForDate(startDate, startTime)
+  if (!runsByWeek.has(weekIndex)) {
+    runsByWeek.set(weekIndex, [newBaseRun])
+  } else {
+    const runsOfWeek: Run[] = [...runsByWeek.get(weekIndex)!]
+    runsByWeek.set(weekIndex, insertedRunIntoSortedList(runsOfWeek, newBaseRun))
+  }
 }
 
 onMounted(async () => {
@@ -125,12 +194,12 @@ onMounted(async () => {
                 <input type="datetime-local" v-model="newRun.startTime" class="border rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2.5" placeholder="Start time">
               </td>
               <td class="py-2">
-                <input type="number" v-model="newRun.distance" step="0.01" class="border rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2.5" placeholder="Distance (mi)">
+                <input type="number" v-model="newRun.distance" step="0.01" min="0" class="border rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2.5" placeholder="Distance (mi)">
               </td>
               <td class="py-2">
-                <input type="number" v-model="newRun.hours" class="max-w-[4rem] border rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2.5" placeholder="Hrs">
-                <input type="number" v-model="newRun.minutes" class="border max-w-[4rem] rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2.5" placeholder="Min">
-                <input type="number" v-model="newRun.seconds" class="border max-w-[4rem] rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2.5" placeholder="Sec">
+                <input type="number" v-model="newRun.hours" min="0" class="max-w-[4rem] border rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2.5" placeholder="Hrs">
+                <input type="number" v-model="newRun.minutes" min="0" class="border max-w-[4rem] rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2.5" placeholder="Min">
+                <input type="number" v-model="newRun.seconds" min="0" class="border max-w-[4rem] rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2.5" placeholder="Sec">
               </td>
             </tr>
           </tbody>
@@ -155,13 +224,13 @@ onMounted(async () => {
             <div class="gap-x-4">
               <div class="min-w-0 flex-auto">
                 <p class="text-md font-semibold leading-6 text-gray-900">Distance</p>
-                <p class="mt-1 truncate text-sm leading-5 text-gray-500">12 mi / 10 mi</p>
+                <p class="mt-1 truncate text-sm leading-5 text-gray-500">{{ totalDistanceOfWeek(idx) }} mi / {{ week.distanceGoal }} mi</p>
               </div>
             </div>
             <div class="gap-x-4">
               <div class="min-w-0 flex-auto">
                 <p class="text-md font-semibold leading-6 text-gray-900">Duration</p>
-                <p class="mt-1 truncate text-sm leading-5 text-gray-500">4:24 hrs / 4:00 hrs</p>
+                <p class="mt-1 truncate text-sm leading-5 text-gray-500">{{ totalDurationOfWeek(idx) }} / {{ week.timeGoal }} hrs</p>
               </div>
             </div>
           </div>
@@ -176,23 +245,11 @@ onMounted(async () => {
                 </tr>
               </thead>
               <tbody>
-                <tr class="border">
-                  <td class="px-4 py-2">Strava</td>
-                  <td class="px-4 py-2">2021-01-01</td>
-                  <td class="px-4 py-2">5.2 mi</td>
-                  <td class="px-4 py-2">34:00 min</td>
-                </tr>
-                <tr class="border">
-                  <td class="px-4 py-2">Strava</td>
-                  <td class="px-4 py-2">2021-01-02</td>
-                  <td class="px-4 py-2">5.2 mi</td>
-                  <td class="px-4 py-2">34:00 min</td>
-                </tr>
-                <tr class="border">
-                  <td class="px-4 py-2">Manual</td>
-                  <td class="px-4 py-2">2021-01-04</td>
-                  <td class="px-4 py-2">5.2 mi</td>
-                  <td class="px-4 py-2">34:00 min</td>
+                <tr class="border" v-for="run in runsByWeek.get(idx)">
+                  <td class="px-4 py-2">{{ run.source }}</td>
+                  <td class="px-4 py-2">{{ run.date }}</td>
+                  <td class="px-4 py-2">{{ run.distance }}</td>
+                  <td class="px-4 py-2">{{ run.duration }}</td>
                 </tr>
               </tbody>
             </table>
@@ -201,6 +258,4 @@ onMounted(async () => {
       </ul>
     </div>
   </main>
-<!--  <button class="bg-blue-500 hover:bg-blue-700 text-white py-2 px-2" @click="createRun">Create run</button>-->
-<!--  <button class="bg-blue-500 hover:bg-blue-700 text-white py-2 px-2" @click="createEvent">Create event</button>-->
 </template>
