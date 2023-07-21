@@ -1,16 +1,20 @@
 <script setup lang="ts">
 
+import {Ref} from "vue";
 import {Event} from "~/types/Event";
 import {Week} from "~/types/Week";
 import {ApiResult} from "~/types/ApiResult";
-import {Ref} from "vue";
 import {RunInDb} from "~/types/RunInDb";
 import {Run} from "~/types/Run";
 import {EventInDb} from "~/types/EventInDb";
 
+/**
+ * Variables
+ * */
+
 const event: Ref<Event | undefined> = ref();
 
-const events: Ref<Event[]> = ref([])
+const events: Ref<EventInDb[]> = ref([])
 
 const runsByWeek: Map<number,Run[]> = reactive(new Map<number, Run[]>());
 
@@ -26,12 +30,20 @@ const displayDiv: Ref<boolean[]> = ref([]);
 
 const selected = ref("")
 
+/**
+ * Computed properties
+ * */
+
 const weeks = computed(() => {
   if (event.value) {
     return event.value.weeks.sort((a: Week, b: Week) => a.weekIndex - b.weekIndex)
   }
   return []
 })
+
+/**
+ * API Calls
+ * */
 
 const getEvent = async (eventId: number): Promise<ApiResult<EventInDb>> => {
   return await $fetch(`/api/event?eventId=${eventId}`)
@@ -45,9 +57,21 @@ const getRunsBetweenDates = async (startDate: Date, endDate: Date): Promise<ApiR
   return await $fetch(`/api/run?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`)
 }
 
+const postRun = (newBaseRun: Run) => {
+  return $fetch('/api/run', {method: 'POST', body: newBaseRun})
+}
+
+/**
+ * UI Controls
+ * */
+
 const toggleDiv = (idx: number) => {
   displayDiv.value[idx] = !displayDiv.value[idx];
 }
+
+/**
+ * Helper methods
+ * */
 
 const getStartDateOfEvent = (event: Event): Date => {
   return subtractWeeks(new Date(event.date), event.weeks.length)
@@ -58,6 +82,25 @@ const subtractWeeks = (date: Date | string, weeks: number): Date => {
   date.setDate(date.getDate() - 7 * weeks);
   return date;
 }
+
+const insertedRunIntoSortedList = (list: Run[], run: Run): Run[] => {
+  let i = 0;
+  while (i < list.length && new Date(list[i].date) < new Date(run.date)) {
+    i++;
+  }
+  list.splice(i, 0, run);
+  return list;
+}
+
+const getWeekIndexForDate = (startDate: Date | string, runDate: Date | string): number => {
+  startDate = new Date(startDate);
+  runDate = new Date(runDate);
+  return Math.floor((runDate.getTime() - startDate.getTime()) / (1000 * 3600 * 24 * 7))
+}
+
+/**
+ * Core
+ * */
 
 const totalDurationOfWeek = (weekIndex: number) => {
   if (runsByWeek.has(weekIndex)) {
@@ -71,21 +114,6 @@ const totalDistanceOfWeek = (weekIndex: number) => {
     return runsByWeek.get(weekIndex)?.reduce((acc, run) => acc + run.distance, 0)
   }
   return 0;
-}
-
-const getWeekIndexForDate = (startDate: Date | string, runDate: Date | string): number => {
-  startDate = new Date(startDate);
-  runDate = new Date(runDate);
-  return Math.floor((runDate.getTime() - startDate.getTime()) / (1000 * 3600 * 24 * 7))
-}
-
-const insertedRunIntoSortedList = (list: Run[], run: Run): Run[] => {
-  let i = 0;
-  while (i < list.length && new Date(list[i].date) < new Date(run.date)) {
-    i++;
-  }
-  list.splice(i, 0, run);
-  return list;
 }
 
 const selectEvent = async () => {
@@ -132,13 +160,8 @@ const createRun = () => {
     url: null
   }
 
-  $fetch(
-    '/api/run',
-    {
-      method: 'POST',
-      body: newBaseRun
-    }
-  )
+  postRun(newBaseRun)
+
   const startDate = getStartDateOfEvent(event.value!)
   const weekIndex = getWeekIndexForDate(startDate, startTime)
   if (!runsByWeek.has(weekIndex)) {
@@ -149,13 +172,17 @@ const createRun = () => {
   }
 }
 
+
+/**
+ * Lifecycle hooks
+ * */
+
 onMounted(async () => {
   const allEvents = await getEvents();
   if (allEvents && allEvents.result) {
     events.value = allEvents.result;
   }
 })
-
 
 </script>
 
