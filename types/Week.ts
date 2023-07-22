@@ -1,5 +1,5 @@
 export interface Week {
-    id: number
+    eventId: number
     weekIndex: number
     distanceGoal: number
     timeGoal: number

@@ -9,6 +9,15 @@ const newEventMeta = ref({
 const weekDistances = reactive(new Map())
 const weekDurations = reactive(new Map())
 
+const newEventMessage = ref('');
+
+const timeoutEventMessage = (message: string, sec: number) => {
+  newEventMessage.value = message;
+  setTimeout(() => {
+    newEventMessage.value = '';
+  }, sec * 1000);
+}
+
 const storeWeekDistance = (weekIndex: number, distance: number | string) => {
   weekDistances.set(weekIndex, Number(distance))
 }
@@ -33,12 +42,65 @@ const isValidNewEvent = computed(() => {
   return true
 })
 
-const postNewEvent = () => {
+const resetNewEvent = () => {
+  newEventMeta.value = {
+    name: '',
+    date: '',
+    numWeeks: 0,
+  }
+  weekDistances.clear()
+  weekDurations.clear()
+}
+
+const postEvent = async (name: string, date: Date) => {
+  const res = await $fetch('/api/event', {
+    method: 'POST',
+    body: {
+      name: name,
+      date: date,
+    }
+  })
+  console.log(res)
+  return res;
+}
+
+const postWeek = async (
+  eventId: number,
+  weekIndex: number,
+  distanceGoal: number,
+  timeGoal: number) => {
+  const res = await $fetch('/api/week', {
+    method: 'POST',
+    body: {
+      eventId: eventId,
+      weekIndex: weekIndex,
+      distanceGoal: distanceGoal,
+      timeGoal: timeGoal,
+    }
+  })
+  console.log(res)
+  return res;
+}
+
+const postNewEvent = async () => {
   if (!isValidNewEvent.value) {
     console.log("New event is invalid")
     return
   }
-  console.log("New event is valid")
+  console.log("New event is valid. Posting...")
+  const res = await postEvent(newEventMeta.value.name, new Date(newEventMeta.value.date));
+  if (!res || !res.result) {
+    console.log("Error posting new event")
+    return
+  }
+  const eventId = res.result.id
+  for (let i = 1; i < newEventMeta.value.numWeeks + 1; i++) {
+    const distanceGoal = weekDistances.get(i)
+    const timeGoal = weekDurations.get(i)
+    await postWeek(eventId, i, distanceGoal, timeGoal)
+  }
+  timeoutEventMessage("Successfully posted new event!", 10)
+  resetNewEvent()
 }
 
 </script>
@@ -95,6 +157,7 @@ const postNewEvent = () => {
           <button @click="postNewEvent" :disabled="!isValidNewEvent" class="bg-blue-500 disabled:bg-blue-100 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" type="button">
             Add
           </button>
+          <p v-if="newEventMessage !== ''" class="text-blue-500 font-semibold">{{ newEventMessage }}</p>
         </div>
       </div>
     </div>
