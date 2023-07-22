@@ -80,15 +80,13 @@ const resetNewEvent = () => {
 }
 
 const postEvent = async (name: string, date: Date) => {
-  const res = await $fetch('/api/event', {
+  return await $fetch('/api/event', {
     method: 'POST',
     body: {
       name: name,
       date: date,
     }
   })
-  console.log(res)
-  return res;
 }
 
 const getEvents = async (): Promise<ApiResult<EventInDb[]>> => {
@@ -100,7 +98,7 @@ const postWeek = async (
   weekIndex: number,
   distanceGoal: number,
   timeGoal: number) => {
-  const res = await $fetch('/api/week', {
+  return await $fetch('/api/week', {
     method: 'POST',
     body: {
       eventId: eventId,
@@ -109,8 +107,6 @@ const postWeek = async (
       timeGoal: timeGoal,
     }
   })
-  console.log(res)
-  return res;
 }
 
 const postNewEvent = async () => {
@@ -118,7 +114,6 @@ const postNewEvent = async () => {
     console.log("New event is invalid")
     return
   }
-  console.log("New event is valid. Posting...")
   const res = await postEvent(newEventMeta.value.name, new Date(newEventMeta.value.date));
   if (!res || !res.result) {
     console.log("Error posting new event")
@@ -132,6 +127,7 @@ const postNewEvent = async () => {
   }
   timeoutEventMessage("Successfully posted new event!", 10)
   resetNewEvent()
+  await refreshEvents()
 }
 
 const deleteEvent = async (eventId: number) => {
@@ -143,15 +139,60 @@ const deleteEvent = async (eventId: number) => {
 }
 
 const resetChangesToEvent = (eventId: number) => {
-  console.log("Resetting changes to event " + eventId)
-  const event = eventMapToReset.get(eventId)
-  if (event) {
-    eventMap.set(eventId, event)
-  }
+  deepCopyResetMapToEvent(eventId)
 }
 
 const saveChangesToEvent = async (eventId: number) => {
-  console.log("Saving changes to event " + eventId)
+  const event = eventMap.get(eventId)
+  if (!event) {
+    return
+  }
+  event.weeks.forEach((week) => {
+    if (weekOfEventHasChanged(eventId, week.weekIndex)) {
+      postWeek(eventId, week.weekIndex, week.distanceGoal, week.timeGoal)
+    }
+  })
+
+  // update the reset map from the current map
+  deepCopyEventToResetMap(eventId)
+}
+
+const deepCopyEventToResetMap = (eventId: number) => {
+  const event = eventMap.get(eventId)
+  if (!event) {
+    return
+  }
+  eventMapToReset.set(Number(eventId), {
+    name: event.name,
+    date: new Date(event.date),
+    weeks: event.weeks.map(week => {
+      return {
+        eventId: Number(eventId),
+        weekIndex: Number(week.weekIndex),
+        distanceGoal: Number(week.distanceGoal),
+        timeGoal: Number(week.timeGoal),
+      }
+    })
+  })
+}
+
+const deepCopyResetMapToEvent = (eventId: number) => {
+  const resetEvent = eventMapToReset.get(eventId)
+  if (!resetEvent) {
+    return
+  }
+  eventMap.set(Number(eventId), {
+    name: resetEvent.name,
+    date: new Date(resetEvent.date),
+    weeks: resetEvent.weeks.map(week => {
+      return {
+        eventId: Number(eventId),
+        weekIndex: Number(week.weekIndex),
+        distanceGoal: Number(week.distanceGoal),
+        timeGoal: Number(week.timeGoal),
+      }
+    })
+  })
 }
 
 const hasEventBeenEdited = (eventId: number) => {
@@ -163,13 +204,21 @@ const hasEventBeenEdited = (eventId: number) => {
   return false
 }
 
-/**
- * Lifecycle hooks
- * */
+const weekOfEventHasChanged = (eventId: number, weekIndex: number) => {
+  const event = eventMap.get(eventId)
+  const eventToReset = eventMapToReset.get(eventId)
+  if (event && eventToReset) {
+    const week = event.weeks.find(w => w.weekIndex === weekIndex)
+    const weekToReset = eventToReset.weeks.find(w => w.weekIndex === weekIndex)
+    if (week && weekToReset) {
+      return JSON.stringify(week) !== JSON.stringify(weekToReset)
+    }
+  }
+  return false
+}
 
-onMounted(async () => {
+const refreshEvents = async () => {
   const allEvents = await getEvents();
-  console.log(allEvents)
   if (allEvents && allEvents.result) {
     allEvents.result.forEach(event => {
       eventMap.set(Number(event.id), {
@@ -198,6 +247,13 @@ onMounted(async () => {
       })
     })
   }
+}
+
+/**
+ * Lifecycle hooks
+ * */
+onMounted(async () => {
+  await refreshEvents()
 })
 
 </script>
