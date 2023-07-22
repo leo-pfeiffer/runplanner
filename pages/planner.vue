@@ -208,19 +208,19 @@ onMounted(async () => {
     <div class="mx-auto max-w-7xl py-6 sm:px-6 lg:px-8 border-2">
       <div class="bg-white rounded px-8 pt-6 pb-8 mb-4">
         <div class="grid grid-cols-1 md:grid-cols-3">
-          <div class="mr-4">
+          <div class="md:mr-4 mb-2">
             <label class="block text-gray-700 text-sm font-bold mb-2" for="event-name">
               Event name
             </label>
             <input v-model="newEventMeta.name" class="w-full border rounded-lg focus:ring-blue-500 focus:border-blue-500 px-2.5 py-1" id="event-name" type="text" placeholder="Event name">
           </div>
-          <div class="mx-4">
+          <div class="md:mx-4 mb-2">
             <label class="block text-gray-700 text-sm font-bold mb-2" for="date-and-time">
               Date and time
             </label>
             <input v-model="newEventMeta.date" type="datetime-local" class="w-full border rounded-lg focus:ring-blue-500 focus:border-blue-500 px-2.5 py-1" id="date-and-time"  placeholder="Date and time">
           </div>
-          <div class="ml-4">
+          <div class="md:ml-4 mb-2">
             <label class="block text-gray-700 text-sm font-bold mb-2" for="weeks">
               Weeks
             </label>

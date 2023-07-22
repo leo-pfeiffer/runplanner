@@ -246,28 +246,35 @@ onMounted(async () => {
         <p class="mt-1 truncate text-sm leading-5 text-gray-500">{{ formatDate(event.date) }}</p>
       </div>
       <div>
-        <table class="table-auto w-full border-collapse border" v-if="selected">
-          <tbody>
-            <tr class="text-sm text-center bg-slate-100">
-              <td class="px-4 py-2">
-                <button class="text-md font-semibold px-2.5 py-1 border-2 rounded-md bg-slate-50 hover:border-red-300" @click="createRun">
-                  Add new run
-                </button>
-              </td>
-              <td class="py-2">
-                <input type="datetime-local" v-model="newRun.startTime" class="border rounded-lg focus:ring-blue-500 focus:border-blue-500 px-2.5 py-1" placeholder="Start time">
-              </td>
-              <td class="py-2">
-                <input type="number" v-model="newRun.distance" step="0.01" min="0" class="border rounded-lg focus:ring-blue-500 focus:border-blue-500 px-2.5 py-1" placeholder="Distance (mi)">
-              </td>
-              <td class="py-2">
-                <input type="number" v-model="newRun.hours" min="0" class="max-w-[4rem] border rounded-lg focus:ring-blue-500 focus:border-blue-500 px-2.5 py-1" placeholder="Hrs">
-                <input type="number" v-model="newRun.minutes" min="0" class="border max-w-[4rem] rounded-lg focus:ring-blue-500 focus:border-blue-500 px-2.5 py-1 ml-1" placeholder="Min">
-                <input type="number" v-model="newRun.seconds" min="0" class="border max-w-[4rem] rounded-lg focus:ring-blue-500 focus:border-blue-500 px-2.5 py-1 ml-1" placeholder="Sec">
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <div v-if="selected">
+          <div class="grid grid-cols-1 md:grid-cols-3">
+            <div class="md:mr-4 mb-2">
+              <label class="block text-gray-700 text-sm font-bold mb-2" for="event-name">
+                Start time
+              </label>
+              <input type="datetime-local" v-model="newRun.startTime" class="w-full border rounded-lg focus:ring-blue-500 focus:border-blue-500 px-2.5 py-1" id="event-name" placeholder="Start time">
+            </div>
+            <div class="md:mx-4 mb-2">
+              <label class="block text-gray-700 text-sm font-bold mb-2" for="date-and-time">
+                Distance
+              </label>
+              <input type="number" v-model="newRun.distance" step="0.01" min="0" class="w-full border rounded-lg focus:ring-blue-500 focus:border-blue-500 px-2.5 py-1" placeholder="Distance (mi)">
+            </div>
+            <div class="md:ml-4 mb-2">
+              <label class="block text-gray-700 text-sm font-bold mb-2" for="weeks">
+                Duration
+              </label>
+              <input type="number" v-model="newRun.hours" min="0" class="max-w-[4rem] border rounded-lg focus:ring-blue-500 focus:border-blue-500 px-2.5 py-1" placeholder="Hrs">
+              <input type="number" v-model="newRun.minutes" min="0" class="border max-w-[4rem] rounded-lg focus:ring-blue-500 focus:border-blue-500 px-2.5 py-1 ml-1" placeholder="Min">
+              <input type="number" v-model="newRun.seconds" min="0" class="border max-w-[4rem] rounded-lg focus:ring-blue-500 focus:border-blue-500 px-2.5 py-1 ml-1" placeholder="Sec">
+            </div>
+          </div>
+          <div class="flex items-center justify-between">
+            <button class="text-md font-semibold px-2.5 py-1 border-2 rounded-md bg-slate-50 hover:border-red-300" @click="createRun">
+              Add new run
+            </button>
+          </div>
+        </div>
       </div>
       <ul role="list">
         <li v-for="(week, idx) in weeks" class="gap-4 gap-x-6">
