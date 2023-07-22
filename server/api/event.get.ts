@@ -4,6 +4,7 @@ const prisma = new PrismaClient()
 
 export default defineEventHandler(async (event) => {
     const query = await getQuery(event)
+    const includeWeeks = query.includeWeeks === 'true'
     console.log(query)
     let result;
     // return event by ID
@@ -19,7 +20,7 @@ export default defineEventHandler(async (event) => {
     else {
         result = await prisma.event.findMany({
             include: {
-                weeks: false
+                weeks: includeWeeks
             }
         })
     }

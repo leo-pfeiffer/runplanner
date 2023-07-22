@@ -7,6 +7,7 @@ import {ApiResult} from "~/types/ApiResult";
 import {RunInDb} from "~/types/RunInDb";
 import {Run} from "~/types/Run";
 import {EventInDb} from "~/types/EventInDb";
+import {formatDate, formatDateAndTime} from "~/utils/dateutils";
 
 /**
  * Variables
@@ -46,7 +47,7 @@ const weeks = computed(() => {
  * */
 
 const getEvent = async (eventId: number): Promise<ApiResult<EventInDb>> => {
-  return await $fetch(`/api/event?eventId=${eventId}`)
+  return await $fetch(`/api/event?eventId=${eventId}&includeWeeks=true`)
 }
 
 const getEvents = async (): Promise<ApiResult<EventInDb[]>> => {
@@ -72,10 +73,6 @@ const toggleDiv = (idx: number) => {
 /**
  * Helper methods
  * */
-
-const formatDate = (date: Date | string): string => {
-  return new Date(date).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'})
-}
 
 const getStartDateOfEvent = (event: Event): Date => {
   return subtractWeeks(new Date(event.date), event.weeks.length)
@@ -239,7 +236,7 @@ onMounted(async () => {
   <main>
     <div class="mx-auto max-w-7xl py-6 sm:px-6 lg:px-8 border-2">
       <div>
-        <select v-model="selected" class="border rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2.5" @change="selectEvent">
+        <select v-model="selected" class="border rounded-lg focus:ring-blue-500 focus:border-blue-500 px-2.5 py-1" @change="selectEvent">
           <option disabled value="">Please select an event</option>
           <option v-for="e in events" :value="e.id" :key="e.id">{{ e.name }}</option>
         </select>
@@ -253,20 +250,20 @@ onMounted(async () => {
           <tbody>
             <tr class="text-sm text-center bg-slate-100">
               <td class="px-4 py-2">
-                <button class="text-md font-semibold py-2 px-2 border-2 rounded-md bg-slate-50 hover:border-red-300" @click="createRun">
+                <button class="text-md font-semibold px-2.5 py-1 border-2 rounded-md bg-slate-50 hover:border-red-300" @click="createRun">
                   Add new run
                 </button>
               </td>
               <td class="py-2">
-                <input type="datetime-local" v-model="newRun.startTime" class="border rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2.5" placeholder="Start time">
+                <input type="datetime-local" v-model="newRun.startTime" class="border rounded-lg focus:ring-blue-500 focus:border-blue-500 px-2.5 py-1" placeholder="Start time">
               </td>
               <td class="py-2">
-                <input type="number" v-model="newRun.distance" step="0.01" min="0" class="border rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2.5" placeholder="Distance (mi)">
+                <input type="number" v-model="newRun.distance" step="0.01" min="0" class="border rounded-lg focus:ring-blue-500 focus:border-blue-500 px-2.5 py-1" placeholder="Distance (mi)">
               </td>
               <td class="py-2">
-                <input type="number" v-model="newRun.hours" min="0" class="max-w-[4rem] border rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2.5" placeholder="Hrs">
-                <input type="number" v-model="newRun.minutes" min="0" class="border max-w-[4rem] rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2.5 ml-1" placeholder="Min">
-                <input type="number" v-model="newRun.seconds" min="0" class="border max-w-[4rem] rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2.5 ml-1" placeholder="Sec">
+                <input type="number" v-model="newRun.hours" min="0" class="max-w-[4rem] border rounded-lg focus:ring-blue-500 focus:border-blue-500 px-2.5 py-1" placeholder="Hrs">
+                <input type="number" v-model="newRun.minutes" min="0" class="border max-w-[4rem] rounded-lg focus:ring-blue-500 focus:border-blue-500 px-2.5 py-1 ml-1" placeholder="Min">
+                <input type="number" v-model="newRun.seconds" min="0" class="border max-w-[4rem] rounded-lg focus:ring-blue-500 focus:border-blue-500 px-2.5 py-1 ml-1" placeholder="Sec">
               </td>
             </tr>
           </tbody>
@@ -328,18 +325,18 @@ onMounted(async () => {
             <table class="table-auto w-full border-collapse border">
               <thead class="bg-slate-100">
                 <tr class="border">
-                  <th class="px-4 py-2">Source</th>
-                  <th class="px-4 py-2">Date</th>
-                  <th class="px-4 py-2">Distance</th>
-                  <th class="px-4 py-2">Duration</th>
+                  <th class="px-2.5 py-1">Source</th>
+                  <th class="px-2.5 py-1">Date</th>
+                  <th class="px-2.5 py-1">Distance</th>
+                  <th class="px-2.5 py-1">Duration</th>
                 </tr>
               </thead>
               <tbody>
                 <tr class="border" v-for="run in runsByWeek.get(idx)">
-                  <td class="px-4 py-2">{{ run.source }}</td>
-                  <td class="px-4 py-2">{{ run.date }}</td>
-                  <td class="px-4 py-2">{{ run.distance }}</td>
-                  <td class="px-4 py-2">{{ run.duration }}</td>
+                  <td class="px-2.5 py-1">{{ run.source }}</td>
+                  <td class="px-2.5 py-1">{{ formatDateAndTime(run.date) }}</td>
+                  <td class="px-2.5 py-1">{{ run.distance }}</td>
+                  <td class="px-2.5 py-1">{{ run.duration }}</td>
                 </tr>
               </tbody>
             </table>
