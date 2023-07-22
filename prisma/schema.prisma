@@ -25,6 +25,7 @@ model Week {
   eventId       Int
   distanceGoal  Int
   timeGoal      Int    // in minutes
+  @@unique([eventId, weekIndex])
 }
 
 model Event {
