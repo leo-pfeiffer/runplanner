@@ -241,6 +241,9 @@ onMounted(async () => {
           <option v-for="e in events" :value="e.id" :key="e.id">{{ e.name }}</option>
         </select>
       </div>
+      <div class="my-2 font-semibold" v-if="events.length === 0">
+        No events yet. Create one in the <a href="/planner" class="underline">planner</a>.
+      </div>
       <div class="text-center py-5 my-2 bg-red-300" v-if="event">
         <p class="text-2xl font-bold leading-6 text-gray-900">{{ event.name }}</p>
         <p class="mt-1 truncate text-sm leading-5 text-gray-500">{{ formatDate(event.date) }}</p>
