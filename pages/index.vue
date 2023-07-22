@@ -215,6 +215,15 @@ const createRun = () => {
     const runsOfWeek: Run[] = [...runsByWeek.get(weekIndex)!]
     runsByWeek.set(weekIndex, insertedRunIntoSortedList(runsOfWeek, newBaseRun))
   }
+
+  // reset form
+  newRun.value = {
+    distance: null,
+    hours: null,
+    minutes: null,
+    seconds: null,
+    startTime: null,
+  };
 }
 
 
@@ -304,10 +313,10 @@ onMounted(async () => {
                   Distance ({{ getChangeText(getWeeklyDistanceChange(idx)) }})
                 </p>
                 <p class="mt-1 truncate text-sm leading-5 text-gray-500" title="Target distance">
-                  🎯 {{ totalDistanceOfWeek(idx) }} mi
+                  🎯 {{ week.distanceGoal }} mi
                 </p>
                 <p class="mt-1 truncate text-sm leading-5 text-gray-500" title="Actual distance">
-                  🏆 {{ week.distanceGoal }} mi
+                  🏆 {{ Math.round(totalDistanceOfWeek(idx) * 10) / 10 }} mi
                 </p>
                 <p class="mt-1 truncate text-sm leading-5 text-gray-500">
                   {{ getTargetRangeText(week.distanceGoal, totalDistanceOfWeek(idx)) }}
@@ -320,10 +329,10 @@ onMounted(async () => {
                   Duration ({{ getChangeText(getWeeklyDurationChange(idx)) }})
                 </p>
                 <p class="mt-1 truncate text-sm leading-5 text-gray-500" title="Target distance">
-                  🎯 {{ formatMinutesToTime(totalDurationOfWeek(idx) / 60) }} hrs
+                  🎯 {{ formatMinutesToTime(week.timeGoal) }} hrs
                 </p>
                 <p class="mt-1 truncate text-sm leading-5 text-gray-500" title="Target duration">
-                  🏆 {{ formatMinutesToTime(week.timeGoal) }} hrs
+                  🏆 {{ formatMinutesToTime(totalDurationOfWeek(idx) / 60) }} hrs
                 </p>
                 <p class="mt-1 truncate text-sm leading-5 text-gray-500">
                   {{ getTargetRangeText(week.timeGoal, totalDurationOfWeek(idx)) }}
