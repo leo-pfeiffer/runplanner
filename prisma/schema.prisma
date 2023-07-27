@@ -34,3 +34,20 @@ model Event {
   date    DateTime
   weeks   Week[]
 }
+
+model User {
+  id          Int     @id @default(autoincrement())
+  name        String
+  email       String  @unique
+  stravaUser  StravaUser?
+}
+
+model StravaUser {
+  id          Int     @id @default(autoincrement())
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      Int     @unique
+  username    String
+  accessToken String
+  refreshToken String
+  expiresAt   DateTime
+}
