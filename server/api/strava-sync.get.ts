@@ -1,5 +1,16 @@
 import {PrismaClient} from "@prisma/client";
+import {timeToExpiration} from "~/utils/tokenutils";
 const prisma = new PrismaClient()
+
+const refreshTokenIfExpired = async (userId: number, expiresAt: number) => {
+    const expiresIn = timeToExpiration(expiresAt)
+    if (expiresIn < 1800) {
+        console.log("Refreshing token. Old token expires in:", expiresIn)
+        await $fetch("/api/strava-refresh?" + new URLSearchParams({userId: `${userId}`}), {
+            method: "POST"
+        })
+    }
+}
 
 const fetchPage = (page: number, accessToken: String): Promise<{
     id: number,
@@ -61,8 +72,6 @@ const createStravaRun = (stravaId: number, distance: number, duration: number, d
 }
 
 export default defineEventHandler(async (event) => {
-    const config = useRuntimeConfig().public
-
     const query = await getQuery(event)
 
     // check if user even has an associated strava user
@@ -77,6 +86,8 @@ export default defineEventHandler(async (event) => {
             result: "No strava user found"
         }
     }
+
+    await refreshTokenIfExpired(Number(query.userId), Number(stravaUser.expiresAt))
 
     let currPage = 1;
     let activities: {
@@ -95,7 +106,6 @@ export default defineEventHandler(async (event) => {
     }
 
     const filteredActivities = filterActivities(activities)
-    console.log(filteredActivities)
 
     for (const activity of filteredActivities) {
         // @ts-ignore

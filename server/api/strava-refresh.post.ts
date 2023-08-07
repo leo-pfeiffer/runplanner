@@ -30,7 +30,6 @@ export default defineEventHandler(async (event) => {
 
 
     if (res && res.access_token && res.refresh_token && res.expires_at) {
-        console.log(res)
         await $fetch(
             "/api/strava-user", {
                 method: "POST",

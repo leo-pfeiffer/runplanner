@@ -4,7 +4,6 @@ const prisma = new PrismaClient()
 
 export default defineEventHandler(async (event) => {
     const body = await readBody(event)
-    console.log(body)
     const result = await prisma.stravaUser.upsert({
         where: {
             userId: Number(body.userId)
@@ -22,7 +21,6 @@ export default defineEventHandler(async (event) => {
             expiresAt: Number(body.expiresAt)
         }
     })
-    console.log(result)
     return {
         result : result
     }

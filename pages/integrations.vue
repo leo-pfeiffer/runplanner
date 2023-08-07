@@ -1,28 +1,22 @@
 <script setup lang="ts">
+import {ApiResult} from "~/types/ApiResult";
+import {RunInDb} from "~/types/RunInDb";
+import {Ref} from "vue";
+
 const config = useRuntimeConfig().public;
 
 const hasStravaUser = ref(false);
 const userId = ref(0);
 const theUrl = ref("");
+const allRuns: Ref<RunInDb[]> = ref([]);
 
 const updateUrl = () => {
-  const url = config.stravaOauthUrl + "?" + new URLSearchParams({
+  theUrl.value = config.stravaOauthUrl + "?" + new URLSearchParams({
     response_type: "code",
     client_id: `${config.stravaClientId}`,
     scope: `${config.stravaScope}`,
     redirect_uri: `${config.stravaCallbackUrl}?userId=${userId.value}`,
   })
-  console.log(url)
-  theUrl.value = url
-}
-
-const refreshStravaToken = async () => {
-  console.log("refreshStravaToken")
-  const response = await fetch("/api/strava-refresh?" + new URLSearchParams({userId: `${userId.value}`}), {
-    method: "POST"
-  })
-  const data = await response.json()
-  console.log(data)
 }
 
 const removeStrava = async () => {
@@ -48,28 +42,21 @@ const getUser = async () => {
   }))
   const data = await response.json()
   userId.value = data.result.id
+  hasStravaUser.value = !!data.result.stravaUser;
+}
 
-  if (data.result.stravaUser) {
-    hasStravaUser.value = true
-    // check if token expires in next 60 minutes
-    const timeIn30Minutes = Number(new Date()) / 1000 + 3600
-    const expiresAt = Number(data.result.stravaUser.expires_at)
-    if (expiresAt < timeIn30Minutes) {
-      const response = await fetch("/api/strava-refresh?" + new URLSearchParams({userId: `${userId.value}`}), {
-        method: "POST"
-      })
-      console.log(response.json())
-    }
-  } else {
-    hasStravaUser.value = false
-  }
-  console.log(data)
-  console.log(userId.value)
+const getRuns = async (): Promise<ApiResult<RunInDb[]>> => {
+  return await $fetch("/api/run")
+}
+
+const updateRuns = async () => {
+  allRuns.value = (await getRuns()).result
 }
 
 onMounted(async () => {
   await getUser()
   updateUrl()
+  await updateRuns()
 })
 
 </script>
@@ -85,12 +72,28 @@ onMounted(async () => {
       <div v-else>
         Congrats, you have enabled Strava.
         <br>
-        <button @click="refreshStravaToken" class="underline">Refresh Strava Token</button>
-        <br>
         <button @click="removeStrava" class="underline">Remove Strava</button>
       </div>
       <div class="bg-white rounded px-8 pt-6 pb-8 mb-4">
         <button @click="listActivities" class="underline">Sync Activities</button>
+        <table class="table-auto w-full border-collapse border">
+          <thead class="bg-slate-100">
+          <tr class="border">
+            <th class="px-2.5 py-1">Source</th>
+            <th class="px-2.5 py-1">Date</th>
+            <th class="px-2.5 py-1">Distance</th>
+            <th class="px-2.5 py-1">Duration</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr class="border" v-for="run in allRuns">
+            <td class="px-2.5 py-1">{{ run.source }}</td>
+            <td class="px-2.5 py-1">{{ formatDateAndTime(run.date) }}</td>
+            <td class="px-2.5 py-1">{{ run.distance }}</td>
+            <td class="px-2.5 py-1">{{ run.duration }}</td>
+          </tr>
+          </tbody>
+        </table>
       </div>
     </div>
   </main>
