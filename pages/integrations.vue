@@ -65,8 +65,6 @@ onMounted(async () => {
   updateUrl()
 })
 
-// todo make api request
-
 </script>
 
 <template>
