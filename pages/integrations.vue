@@ -3,8 +3,6 @@ const config = useRuntimeConfig().public;
 
 const hasStravaUser = ref(false);
 const userId = ref(0);
-const stravaRefreshToken = ref("")
-const stravaAccessToken = ref("")
 const theUrl = ref("");
 
 const updateUrl = () => {
@@ -16,19 +14,6 @@ const updateUrl = () => {
   })
   console.log(url)
   theUrl.value = url
-}
-
-const makeRequest = async () => {
-  console.log("makeRequest, token: ", stravaAccessToken.value)
-  const response = await fetch("https://www.strava.com/api/v3/athlete", {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${stravaAccessToken.value}`
-    }
-  })
-  const data = await response.json()
-  console.log(data)
 }
 
 const refreshStravaToken = async () => {
@@ -68,8 +53,6 @@ const getUser = async () => {
       })
       console.log(response.json())
     }
-    stravaAccessToken.value = data.result.stravaUser.accessToken
-    stravaRefreshToken.value = data.result.stravaUser.refreshToken
   } else {
     hasStravaUser.value = false
   }
@@ -83,7 +66,6 @@ onMounted(async () => {
 })
 
 // todo make api request
-// todo how to store tokens
 
 </script>
 
@@ -97,12 +79,6 @@ onMounted(async () => {
       </div>
       <div v-else>
         Congrats, you have enabled Strava.
-        <br>
-        Refresh Token: {{ stravaRefreshToken }}
-        <br>
-        Access Token: {{ stravaAccessToken }}
-        <br>
-        <button @click="makeRequest" class="underline">Make Request</button>
         <br>
         <button @click="refreshStravaToken" class="underline">Refresh Strava Token</button>
         <br>

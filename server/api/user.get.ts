@@ -19,6 +19,10 @@ export default defineEventHandler(async (event) => {
     if (result) {
         // @ts-ignore todo
         result.password = undefined
+        if (result.stravaUser) {
+            // @ts-ignore todo
+            result.stravaUser = true;
+        }
     }
     return {
         result : result
