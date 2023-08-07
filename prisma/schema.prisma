@@ -39,6 +39,7 @@ model User {
   id          Int     @id @default(autoincrement())
   name        String
   email       String  @unique
+  password    String
   stravaUser  StravaUser?
 }
 
@@ -49,5 +50,5 @@ model StravaUser {
   username    String
   accessToken String
   refreshToken String
-  expiresAt   DateTime
+  expiresAt   Int
 }
