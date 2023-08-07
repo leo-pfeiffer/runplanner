@@ -14,8 +14,15 @@ model Run {
   distance  Float
   duration  Int    // in seconds
   date      DateTime
-  url       String?
   source    String?
+  stravaRun StravaRun?
+}
+
+model StravaRun {
+  id Int @id @default(autoincrement())
+  stravaId BigInt @unique
+  run Run @relation(fields: [runId], references: [id], onDelete: Cascade)
+  runId Int @unique
 }
 
 model Week {

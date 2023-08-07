@@ -35,6 +35,13 @@ const removeStrava = async () => {
   hasStravaUser.value = false
 }
 
+const listActivities = async () => {
+  console.log("listActivities")
+  const response = await fetch("/api/strava-sync?" + new URLSearchParams({userId: `${userId.value}`}))
+  const data = await response.json()
+  console.log(data)
+}
+
 const getUser = async () => {
   const response = await fetch("/api/user?" + new URLSearchParams({
     email: "leopold.pfeiffer@icloud.com"
@@ -81,6 +88,9 @@ onMounted(async () => {
         <button @click="refreshStravaToken" class="underline">Refresh Strava Token</button>
         <br>
         <button @click="removeStrava" class="underline">Remove Strava</button>
+      </div>
+      <div class="bg-white rounded px-8 pt-6 pb-8 mb-4">
+        <button @click="listActivities" class="underline">Sync Activities</button>
       </div>
     </div>
   </main>

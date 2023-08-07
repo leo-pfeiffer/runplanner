@@ -3,5 +3,4 @@ export interface Run {
     duration: number
     date: Date
     source: string
-    url: string | null
 }
