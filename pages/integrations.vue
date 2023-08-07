@@ -56,17 +56,18 @@ const getUser = async () => {
   }))
   const data = await response.json()
   userId.value = data.result.id
+
   if (data.result.stravaUser) {
     hasStravaUser.value = true
-
     // check if token expires in next 60 minutes
     const timeIn30Minutes = Number(new Date()) / 1000 + 3600
     const expiresAt = Number(data.result.stravaUser.expires_at)
     if (expiresAt < timeIn30Minutes) {
-      // todo refresh token
-      console.log("refresh token")
+      const response = await fetch("/api/strava-refresh?" + new URLSearchParams({userId: `${userId.value}`}), {
+        method: "POST"
+      })
+      console.log(response.json())
     }
-
     stravaAccessToken.value = data.result.stravaUser.accessToken
     stravaRefreshToken.value = data.result.stravaUser.refreshToken
   } else {
