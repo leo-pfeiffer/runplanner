@@ -17,7 +17,7 @@ const fetchPage = (page: number, accessToken: String): Promise<StravaRunActivity
     // @ts-ignore - TS doesn't like this, todo fix
     return $fetch("https://www.strava.com/api/v3/activities?" + new URLSearchParams({
         page: `${page}`,
-        after: "1688718866", // todo as parameter
+        after: "1577836800", // 2020-01-01 todo don't hardcode this
         per_page: "30"
     }), {
         method: "GET",
@@ -51,7 +51,7 @@ const createStravaRun = (stravaId: number, distance: number, duration: number, d
             stravaId: stravaId,
             run: {
                 create: {
-                    distance: distance,
+                    distance: distance * 0.0006213712,  // convert metres to miles
                     duration: duration,
                     date: new Date(date),
                     source: source

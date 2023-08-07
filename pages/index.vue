@@ -201,8 +201,7 @@ const createRun = () => {
     distance: distance,
     duration: duration,
     date: startTime,
-    source: 'manual',
-    url: null
+    source: 'manual'
   }
 
   postRun(newBaseRun)
@@ -335,7 +334,7 @@ onMounted(async () => {
                   🏆 {{ formatMinutesToTime(totalDurationOfWeek(idx) / 60) }} hrs
                 </p>
                 <p class="mt-1 truncate text-sm leading-5 text-gray-500">
-                  {{ getTargetRangeText(week.timeGoal, totalDurationOfWeek(idx)) }}
+                  {{ getTargetRangeText(week.timeGoal, totalDurationOfWeek(idx) / 60) }}
                 </p>
               </div>
             </div>
