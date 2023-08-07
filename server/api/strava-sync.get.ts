@@ -1,5 +1,6 @@
 import {PrismaClient} from "@prisma/client";
 import {timeToExpiration} from "~/utils/tokenutils";
+import {StravaRunActivity, StravaRunActivityClean} from "~/types/StravaRunActivity";
 const prisma = new PrismaClient()
 
 const refreshTokenIfExpired = async (userId: number, expiresAt: number) => {
@@ -12,33 +13,22 @@ const refreshTokenIfExpired = async (userId: number, expiresAt: number) => {
     }
 }
 
-const fetchPage = (page: number, accessToken: String): Promise<{
-    id: number,
-    distance: number,
-    moving_time: number,
-    start_date: number
-}[]> => {
-    return $fetch(
-        "https://www.strava.com/api/v3/activities?" + new URLSearchParams({
-            page: `${page}`,
-            after: "1688718866", // todo as parameter
-            per_page: "30"
-        }), {
-            method: "GET",
-            headers: {
-                "Authorization": `Bearer ${accessToken}`
-            }
-        });
+const fetchPage = (page: number, accessToken: String): Promise<StravaRunActivity[]> => {
+    // @ts-ignore - TS doesn't like this, todo fix
+    return $fetch("https://www.strava.com/api/v3/activities?" + new URLSearchParams({
+        page: `${page}`,
+        after: "1688718866", // todo as parameter
+        per_page: "30"
+    }), {
+        method: "GET",
+        headers: {
+            "Authorization": `Bearer ${accessToken}`
+        }
+    });
 }
 
-const filterActivities = (activities: {
-    id: number,
-    distance: number,
-    moving_time: number,
-    start_date: number
-}[]): [] => {
+const filterActivities = (activities: StravaRunActivity[]): StravaRunActivityClean[] => {
     return activities
-        // @ts-ignore
         .filter((activity) => activity.type === "Run")
         .map((activity) => {
             return {
@@ -90,12 +80,7 @@ export default defineEventHandler(async (event) => {
     await refreshTokenIfExpired(Number(query.userId), Number(stravaUser.expiresAt))
 
     let currPage = 1;
-    let activities: {
-        id: number,
-        distance: number,
-        moving_time: number,
-        start_date: number
-    }[] = [];
+    let activities: StravaRunActivity[] = [];
     while (true) {
         const res = await fetchPage(currPage++, stravaUser.accessToken)
         if (res && res.length > 0) {
@@ -108,7 +93,6 @@ export default defineEventHandler(async (event) => {
     const filteredActivities = filterActivities(activities)
 
     for (const activity of filteredActivities) {
-        // @ts-ignore
         await createStravaRun(activity.stravaId, activity.distance, activity.duration, activity.date, activity.source)
     }
 

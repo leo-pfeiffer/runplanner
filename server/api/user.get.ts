@@ -5,9 +5,9 @@ const prisma = new PrismaClient()
 export default defineEventHandler(async (event) => {
     const query = await getQuery(event)
     const email = query.email
-    let result;
+    let user;
     if (email) {
-        result = await prisma.user.findUnique({
+        user = await prisma.user.findUnique({
             where: {
                 email: email.toString()
             },
@@ -16,15 +16,17 @@ export default defineEventHandler(async (event) => {
             }
         })
     }
-    if (result) {
-        // @ts-ignore todo
-        result.password = undefined
-        if (result.stravaUser) {
-            // @ts-ignore todo
-            result.stravaUser = true;
+    if (user) {
+        return {
+            result : {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                stravaUser: !!user.stravaUser
+            }
         }
     }
     return {
-        result : result
+        result : null
     }
 })

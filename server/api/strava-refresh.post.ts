@@ -1,4 +1,5 @@
 import {PrismaClient} from "@prisma/client";
+import {StravaOauthResponse} from "~/types/StravaOauthResponse";
 const prisma = new PrismaClient()
 
 export default defineEventHandler(async (event) => {
@@ -19,35 +20,31 @@ export default defineEventHandler(async (event) => {
         }
     }
 
-    const res: { access_token: string | null, refresh_token: string | null, expires_at: string | null, } = await $fetch(
+    // @ts-ignore - don't understand why TS is complaining about this, todo fix
+    const res: StravaOauthResponse = await $fetch(
         "https://www.strava.com/oauth/token?" + new URLSearchParams({
             client_id: config.stravaClientId,
             client_secret: config.stravaClientSecret,
             grant_type: "refresh_token",
             refresh_token: stravaUser.refreshToken
         }),
-        {method: "POST"});
+        {
+            method: "POST"
+        });
 
-
-    if (res && res.access_token && res.refresh_token && res.expires_at) {
-        await $fetch(
-            "/api/strava-user", {
-                method: "POST",
-                body: {
-                    userId: Number(query.userId),
-                    username: stravaUser.username,
-                    accessToken: res.access_token,
-                    refreshToken: res.refresh_token,
-                    expiresAt: Number(res.expires_at)
-                }
+    await $fetch(
+        "/api/strava-user", {
+            method: "POST",
+            body: {
+                userId: Number(query.userId),
+                username: stravaUser.username,
+                accessToken: res.access_token,
+                refreshToken: res.refresh_token,
+                expiresAt: Number(res.expires_at)
             }
-        )
-        return {
-            result: "Token refreshed."
         }
-    }
-
+    )
     return {
-        result: "Invalid response from Strava API."
+        result: "Token refreshed."
     }
 })
